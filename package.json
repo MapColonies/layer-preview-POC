@@ -1,0 +1,30 @@
+{
+  "name": "layer-preview-poc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server ./cesiumClientWeb --port 4000",
+    "postinstall": "npm run copyassets:all",
+    "copyassets:all": "npm run copyassets:cesium",
+    "copyassets:cesium": "copyfiles -u 3 \"./node_modules/cesium/Build/Cesium/**/*\" \"./cesiumClientWeb/scripts\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapColonies/layer-preview-POC.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MapColonies/layer-preview-POC/issues"
+  },
+  "homepage": "https://github.com/MapColonies/layer-preview-POC#readme",
+  "devDependencies": {
+    "copyfiles": "^2.4.1"
+  },
+  "dependencies": {
+    "cesium": "^1.94.0",
+    "http-server": "^14.1.1",
+    "puppeteer": "^14.2.0"
+  }
+}
