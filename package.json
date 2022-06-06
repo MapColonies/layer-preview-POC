@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "http-server ./cesiumClientWeb --port 4000",
+    "screenshot": "node ./puppeteer",
     "postinstall": "npm run copyassets:all",
     "copyassets:all": "npm run copyassets:cesium",
     "copyassets:cesium": "copyfiles -u 3 \"./node_modules/cesium/Build/Cesium/**/*\" \"./cesiumClientWeb/scripts\""
