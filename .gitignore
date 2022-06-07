@@ -1,3 +1,4 @@
 cesiumClientWeb/scripts/**
 node_modules
 puppeteer/screenshots/**
+cesiumClientWeb/public/**
