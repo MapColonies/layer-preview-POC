@@ -52,56 +52,68 @@ const appendIconByProductType = productType => {
 };
 
 const getExtentRect = () => {
-  const rect = new Cesium.Rectangle();
-  const computedExtentRect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid, rect);
+  const computedExtentRect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid);
 
   return computedExtentRect;
-}
+};
 
 const getExtentSize = () => {
-  const extent = getExtentRect(); 
+  const extent = getExtentRect();
   const NE = Cesium.Cartographic.toCartesian(Cesium.Rectangle.northeast(extent));
   const SW = Cesium.Cartographic.toCartesian(Cesium.Rectangle.southwest(extent));
 
-  return Cesium.Cartesian3.distance(NE, SW) / 1000 // To get KM distance;
-
-}
+  return Cesium.Cartesian3.distance(NE, SW) / 1000; // To get KM distance;
+};
 
 const getCameraHeight = () => {
   const height = ellipsoid.cartesianToCartographic(viewer.camera.position).height;
-  
-  return Math.floor(height * 0.001); // KM
-}
+
+  return Math.round(height * 0.001); // KM
+};
 
 const setCameraToProperHeightAndPos = () => {
   const cameraPosCartographic = ellipsoid.cartesianToCartographic(viewer.camera.position);
-
-  if(getCameraHeight() > MAX_APPROPRIATE_ZOOM_KM) {
+  
+  if (getCameraHeight() > MAX_APPROPRIATE_ZOOM_KM) {
     cameraPosCartographic.height = MAX_APPROPRIATE_ZOOM_KM * 1000; // Convert to meters
   }
-
+  
   viewer.camera.position = ellipsoid.cartographicToCartesian(cameraPosCartographic);
-}
+
+  // viewer.entities.add({
+  //   name : 'center',
+  //   position :  Cesium.Rectangle.center(getExtentRect()),
+  //   point : {
+  //       pixelSize : 5,
+  //       color : Cesium.Color.RED,
+  //       outlineColor : Cesium.Color.WHITE,
+  //       outlineWidth : 2
+  //   }});
+
+  //  viewer.camera.flyTo({destination: viewer.camera.position, orientation: {pitch: Cesium.Math.toRadians(-15)}, duration: 0});
+
+};
 
 // --------
 
 const url = getParameterByName(URL_PARAM);
 const productType = getParameterByName(PRODUCT_TYPE_PARAM);
 
-console.log(url, productType);
-
 const render3DTileset = () => {
   const tileset = viewer.scene.primitives.add(
         new Cesium.Cesium3DTileset({
           url: new Cesium.Resource({
-            url,
-            headers: tokenHeader
+            url
+                // headers: tokenHeader
           })
-          // url: Cesium.IonResource.fromAssetId(75343)
+            // url: Cesium.IonResource.fromAssetId(75343)
         })
     );
 
-  return viewer.flyTo(tileset, { duration: 0 });
+  return viewer.flyTo(tileset, {
+    duration: 0,
+    offset: new Cesium.HeadingPitchRange(0.0, Cesium.Math.toRadians(-90))
+  });
 };
 
 const renderRasterLayer = () => {
@@ -114,11 +126,20 @@ const renderRasterLayer = () => {
 
   const layer = viewer.imageryLayers.addImageryProvider(provider);
 
-  return viewer.flyTo(layer, { duration: 0 });
+  return viewer.flyTo(layer, {
+    duration: 0,
+    offset: new Cesium.HeadingPitchRange(0.0, Cesium.Math.toRadians(-90))
+  });
 };
 
+viewer.camera.moveEnd.addEventListener(function (clock) {
+  console.log('extent rect', getExtentRect());
+  console.log('extent size', getExtentSize());
+  console.log('extent center', Cesium.Rectangle.center(getExtentRect()));
+  console.log('camera height', getCameraHeight());
 
-
+  console.log('camerapos', Cesium.Math.toDegrees(viewer.camera.pitch));
+});
 
 // Render products
 
@@ -126,7 +147,7 @@ switch (productType) {
   case PRODUCT_TYPE_3D: {
     render3DTileset()
             .then(() => {
-              setCameraToProperHeightAndPos()
+              setCameraToProperHeightAndPos();
             })
             .finally(() => {
               appendIconByProductType(PRODUCT_TYPE_3D);
@@ -137,7 +158,7 @@ switch (productType) {
   case PRODUCT_TYPE_RASTER: {
     renderRasterLayer()
             .then(() => {
-              // viewer.camera.zoomIn(50);
+                // viewer.camera.zoomIn(50);
             })
             .finally(() => {
               appendIconByProductType(PRODUCT_TYPE_RASTER);

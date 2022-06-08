@@ -2,14 +2,19 @@ const fs = require("fs/promises");
 const puppeteer = require("puppeteer");
 
 (async function() {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: [
+          '--disable-web-security',
+        ]});
     const page = await browser.newPage();
     try{
-        await page.setViewport({ width: 1200, height: 600});
-        await page.goto('http://localhost:4000/?url=/mock/tileset_1/tileset.json&type=3d');
+        await page.setViewport({ width: 800, height: 800});
+        // await page.goto('http://localhost:4000/?url=/mock/tileset_1/tileset.json&type=3d');
+        await page.goto('http://localhost:4000/?url=https://3d.ofek-air.com/3d/Jeru_Old_City_Cesium/ACT/Jeru_Old_City_Cesium_ACT.json&type=3d');
         await page.waitForSelector('#layerIcon');
         const cesiumElem = await page.$('#cesiumContainer');
         await fs.mkdir('./puppeteer/screenshots', { recursive: true });
+        await page.waitForTimeout(10000);
         await cesiumElem.screenshot({ path: './puppeteer/screenshots/model.png' });
         await browser.close();
     }catch(e) {
