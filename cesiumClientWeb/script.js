@@ -1,14 +1,17 @@
-const RASTER_TOKEN = '';
+const RASTER_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicmVzb3VyY2VUeXBlcyI6WyJyYXN0ZXIiLCJkZW0iLCJ2ZWN0b3IiLCIzZCJdLCJpYXQiOjE1MTYyMzkwMjJ9.kidhXiB3ihor7FfkaduJxpJQXFMJGVH9fH7WI6GLGM0';
 const tokenHeader = { 'X-API-KEY': RASTER_TOKEN };
 const URL_PARAM = 'url';
 const PRODUCT_TYPE_PARAM = 'type';
 const PRODUCT_TYPE_RASTER = 'raster';
 const PRODUCT_TYPE_3D = '3d';
-const MAX_APPROPRIATE_ZOOM_KM = 2;
-
+const MAX_APPROPRIATE_ZOOM_KM = 1;
+const CONSIDERED_BIG_MODEL = 3;
 
 // Setup Cesium viewer first.
-const viewer = new Cesium.Viewer('cesiumContainer', { baseLayerPicker: false });
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  baseLayerPicker: false
+});
+
 const ellipsoid = viewer.scene.mapProjection.ellipsoid;
 
 // Remove stock cesium's base layer
@@ -72,26 +75,18 @@ const getCameraHeight = () => {
 };
 
 const setCameraToProperHeightAndPos = () => {
-  const cameraPosCartographic = ellipsoid.cartesianToCartographic(viewer.camera.position);
-  
-  if (getCameraHeight() > MAX_APPROPRIATE_ZOOM_KM) {
-    cameraPosCartographic.height = MAX_APPROPRIATE_ZOOM_KM * 1000; // Convert to meters
+  const heading = Cesium.Math.toRadians(0.0);
+  const pitch = Cesium.Math.toRadians(-15.0);
+  let range = viewer.scene.primitives.get(0).boundingSphere.radius;
+
+  if (getExtentSize() >= CONSIDERED_BIG_MODEL) {
+    range = MAX_APPROPRIATE_ZOOM_KM * 1000;
   }
-  
-  viewer.camera.position = ellipsoid.cartographicToCartesian(cameraPosCartographic);
 
-  // viewer.entities.add({
-  //   name : 'center',
-  //   position :  Cesium.Rectangle.center(getExtentRect()),
-  //   point : {
-  //       pixelSize : 5,
-  //       color : Cesium.Color.RED,
-  //       outlineColor : Cesium.Color.WHITE,
-  //       outlineWidth : 2
-  //   }});
-
-  //  viewer.camera.flyTo({destination: viewer.camera.position, orientation: {pitch: Cesium.Math.toRadians(-15)}, duration: 0});
-
+  viewer.camera.lookAt(
+        viewer.scene.primitives.get(0).boundingSphere.center,
+        new Cesium.HeadingPitchRange(heading, pitch, range)
+    );
 };
 
 // --------
@@ -103,8 +98,8 @@ const render3DTileset = () => {
   const tileset = viewer.scene.primitives.add(
         new Cesium.Cesium3DTileset({
           url: new Cesium.Resource({
-            url
-                // headers: tokenHeader
+            url,
+            // headers: tokenHeader
           })
             // url: Cesium.IonResource.fromAssetId(75343)
         })
@@ -117,29 +112,65 @@ const render3DTileset = () => {
 };
 
 const renderRasterLayer = () => {
-  const provider = new Cesium.WebMapTileServiceImageryProvider({
-    url: new Cesium.Resource({
+  viewer.scene.mode = Cesium.SceneMode.SCENE2D;
+
+    const provider = new Cesium.WebMapTileServiceImageryProvider({
       url,
-      headers: tokenHeader
-    })
-  });
+      rectangle: Cesium.Rectangle.fromDegrees(
+        ...turf.bbox({
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                34.26644325256348,
+                31.178147212117395
+              ],
+              [
+                34.327125549316406,
+                31.178147212117395
+              ],
+              [
+                34.327125549316406,
+                31.233132890986248
+              ],
+              [
+                34.26644325256348,
+                31.233132890986248
+              ],
+              [
+                34.26644325256348,
+                31.178147212117395
+              ]
+            ]
+          ]
+        })
+      ),
+      tilingScheme: new Cesium.GeographicTilingScheme(),
+      // style: 'default',
+      // format: 'image/jpeg',
+      // tileMatrixSetID:'libotGrid'
+    });
 
-  const layer = viewer.imageryLayers.addImageryProvider(provider);
+   const layer = viewer.imageryLayers.addImageryProvider(provider);
 
-  return viewer.flyTo(layer, {
-    duration: 0,
-    offset: new Cesium.HeadingPitchRange(0.0, Cesium.Math.toRadians(-90))
-  });
+  return viewer.flyTo(layer, { duration: 0  });
 };
 
-viewer.camera.moveEnd.addEventListener(function (clock) {
-  console.log('extent rect', getExtentRect());
-  console.log('extent size', getExtentSize());
-  console.log('extent center', Cesium.Rectangle.center(getExtentRect()));
-  console.log('camera height', getCameraHeight());
+// viewer.camera.moveEnd.addEventListener(function (clock) {
+//   debugger
+//   console.log('extent rect', getExtentRect());
+//   console.log('extent size', getExtentSize());
+//   console.log('extent center', Cesium.Rectangle.center(getExtentRect()));
+//   console.log('camera height', getCameraHeight());
 
-  console.log('camerapos', Cesium.Math.toDegrees(viewer.camera.pitch));
-});
+//   console.log('camerapos', Cesium.Math.toDegrees(viewer.camera.pitch));
+
+// });
+
+// viewer.scene.globe.tileLoadProgressEvent.addEventListener((a) => {
+//   console.log('tile load event', a);
+//   console.log('tilesLoaded', viewer.scene.globe.tilesLoaded)
+// })
 
 // Render products
 
@@ -157,12 +188,17 @@ switch (productType) {
   }
   case PRODUCT_TYPE_RASTER: {
     renderRasterLayer()
-            .then(() => {
-                // viewer.camera.zoomIn(50);
-            })
-            .finally(() => {
-              appendIconByProductType(PRODUCT_TYPE_RASTER);
+            .then(()=>{
+              let tilesFinished = false
+              const tilesInterval = setInterval(() => {
+               tilesFinished = viewer.scene.globe.tilesLoaded;
+               if(tilesFinished){
+                 clearInterval(tilesInterval);
+                 appendIconByProductType(PRODUCT_TYPE_RASTER);
+               }
+              }, 1000);
             });
+
     break;
   }
 
