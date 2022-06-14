@@ -1,9 +1,10 @@
-const RASTER_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicmVzb3VyY2VUeXBlcyI6WyJyYXN0ZXIiLCJkZW0iLCJ2ZWN0b3IiLCIzZCJdLCJpYXQiOjE1MTYyMzkwMjJ9.kidhXiB3ihor7FfkaduJxpJQXFMJGVH9fH7WI6GLGM0';
-const tokenHeader = { 'X-API-KEY': RASTER_TOKEN };
+const TOKEN = '';
+const tokenHeader = { 'X-API-KEY': TOKEN };
+const tokenQueryParam = {'token': TOKEN};
 const URL_PARAM = 'url';
-const PRODUCT_TYPE_PARAM = 'type';
-const PRODUCT_TYPE_RASTER = 'raster';
-const PRODUCT_TYPE_3D = '3d';
+const PRODUCT_TYPE_PARAM = 'productType';
+const PRODUCT_TYPE_RASTER = 'RECORD_RASTER';
+const PRODUCT_TYPE_3D = 'RECORD_3D';
 const MAX_APPROPRIATE_ZOOM_KM = 1;
 const CONSIDERED_BIG_MODEL = 3;
 
@@ -23,6 +24,17 @@ viewer.timeline.container.style.visibility = 'hidden';
 viewer.forceResize();
 
 // Helpers
+const tilesLoadedPromise = () => {
+ return new Promise((resolve, reject) => {
+    const tilesInterval = setInterval(() => {
+      const tilesLoaded = viewer.scene.globe.tilesLoaded;
+    if(tilesLoaded) {
+      clearInterval(tilesInterval);
+      resolve(true); 
+    }
+    }, 1000);
+ });
+}
 
 const getParameterByName = name => {
   const params = new Proxy(new URLSearchParams(window.location.search), {
@@ -99,6 +111,7 @@ const render3DTileset = () => {
         new Cesium.Cesium3DTileset({
           url: new Cesium.Resource({
             url,
+            queryParameters: {...tokenQueryParam}
             // headers: tokenHeader
           })
             // url: Cesium.IonResource.fromAssetId(75343)
@@ -115,7 +128,11 @@ const renderRasterLayer = () => {
   viewer.scene.mode = Cesium.SceneMode.SCENE2D;
 
     const provider = new Cesium.WebMapTileServiceImageryProvider({
-      url,
+      url: new Cesium.Resource({
+        url,
+        queryParameters: {...tokenQueryParam}
+        // headers: tokenHeader
+      }),
       rectangle: Cesium.Rectangle.fromDegrees(
         ...turf.bbox({
           "type": "Polygon",
@@ -167,9 +184,10 @@ const renderRasterLayer = () => {
 
 // });
 
-// viewer.scene.globe.tileLoadProgressEvent.addEventListener((a) => {
-//   console.log('tile load event', a);
-//   console.log('tilesLoaded', viewer.scene.globe.tilesLoaded)
+// viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
+//   if(viewer.scene.globe.tilesLoaded) {
+//     console.log('tilesLoaded', viewer.scene.globe.tilesLoaded);
+//   }
 // })
 
 // Render products
@@ -177,10 +195,9 @@ const renderRasterLayer = () => {
 switch (productType) {
   case PRODUCT_TYPE_3D: {
     render3DTileset()
+            .then(setCameraToProperHeightAndPos)
+            .then(tilesLoadedPromise)
             .then(() => {
-              setCameraToProperHeightAndPos();
-            })
-            .finally(() => {
               appendIconByProductType(PRODUCT_TYPE_3D);
             });
 
@@ -188,16 +205,8 @@ switch (productType) {
   }
   case PRODUCT_TYPE_RASTER: {
     renderRasterLayer()
-            .then(()=>{
-              let tilesFinished = false
-              const tilesInterval = setInterval(() => {
-               tilesFinished = viewer.scene.globe.tilesLoaded;
-               if(tilesFinished){
-                 clearInterval(tilesInterval);
-                 appendIconByProductType(PRODUCT_TYPE_RASTER);
-               }
-              }, 1000);
-            });
+            .then(tilesLoadedPromise)
+            .then(()=> appendIconByProductType(PRODUCT_TYPE_RASTER));
 
     break;
   }
