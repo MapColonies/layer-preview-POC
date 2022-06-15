@@ -3,6 +3,7 @@ const tokenHeader = { 'X-API-KEY': TOKEN };
 const tokenQueryParam = {'token': TOKEN};
 const URL_PARAM = 'url';
 const PRODUCT_TYPE_PARAM = 'productType';
+const BBOX_PARAM = 'bbox';
 const PRODUCT_TYPE_RASTER = 'RECORD_RASTER';
 const PRODUCT_TYPE_3D = 'RECORD_3D';
 const MAX_APPROPRIATE_ZOOM_KM = 1;
@@ -105,6 +106,7 @@ const setCameraToProperHeightAndPos = () => {
 
 const url = getParameterByName(URL_PARAM);
 const productType = getParameterByName(PRODUCT_TYPE_PARAM);
+const bbox = getParameterByName(BBOX_PARAM);
 
 const render3DTileset = () => {
   const tileset = viewer.scene.primitives.add(
@@ -134,33 +136,7 @@ const renderRasterLayer = () => {
         // headers: tokenHeader
       }),
       rectangle: Cesium.Rectangle.fromDegrees(
-        ...turf.bbox({
-          "type": "Polygon",
-          "coordinates": [
-            [
-              [
-                34.26644325256348,
-                31.178147212117395
-              ],
-              [
-                34.327125549316406,
-                31.178147212117395
-              ],
-              [
-                34.327125549316406,
-                31.233132890986248
-              ],
-              [
-                34.26644325256348,
-                31.233132890986248
-              ],
-              [
-                34.26644325256348,
-                31.178147212117395
-              ]
-            ]
-          ]
-        })
+        ...JSON.parse(bbox)
       ),
       tilingScheme: new Cesium.GeographicTilingScheme(),
       // style: 'default',
