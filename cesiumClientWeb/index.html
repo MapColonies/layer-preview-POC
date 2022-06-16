@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thumbnail Presentor</title>
     <script src="scripts/Cesium/Cesium.js"></script>
-    <script src="scripts/turf/turf.min.js"></script>
-    <link rel="stylesheet" href="scripts/Cesium/Widgets/widgets.css" />
-    <link rel="stylesheet" href="public/fonts/mc-icons/style.css" />
+    <script src="scripts/@turf/turf/turf.min.js"></script>
     <script src="./script.js" defer></script>
     <style>
+        @import url("scripts/Cesium/Widgets/widgets.css");
+        @import url("public/fonts/mc-icons/style.css");
+        
        * {
             padding: 0;
             margin: 0;
@@ -32,8 +33,8 @@
             top: 3vw;
             left: 3vw;
             font-size:calc(12px + 3vw);
-            color:white;
-            filter: drop-shadow(0 0 0.5rem rgb(0 0 0));
+            color:black;
+            filter: drop-shadow(0 0 0.5rem rgb(255,255,255));
             z-index: 10;
         }
 
